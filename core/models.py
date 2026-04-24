@@ -48,3 +48,47 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+
+class Service(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    service_name = models.CharField(max_length=100)
+    provider_name = models.CharField(max_length=100, blank=True, null=True)
+    reference_number = models.CharField(max_length=100, blank=True, null=True)
+    due_day = models.IntegerField()
+    typical_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3)
+    cancellation_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.service_name
+
+
+class Movement(models.Model):
+    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    destination_account = models.ForeignKey(
+        Account,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='destination_movements'
+    )
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    service = models.ForeignKey(
+        'Service',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    amount = models.BigIntegerField()
+    description = models.CharField(max_length=255, blank=True, null=True)
+    movement_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.amount} - {self.account}"
+
+
