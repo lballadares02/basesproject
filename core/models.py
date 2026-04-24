@@ -11,3 +11,23 @@ class User(models.Model):
 
     def __str__(self):
         return self.email
+    
+
+class Account(models.Model):
+    ACCOUNT_TYPES = [
+        ('ACTIVO', 'Activo'),
+        ('PASIVO', 'Pasivo'),
+        ('CAPITAL', 'Capital'),
+        ('INGRESO', 'Ingreso'),
+        ('GASTO', 'Gasto'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    account_name = models.CharField(max_length=100)
+    account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPES)
+    currency = models.CharField(max_length=3)
+    creation_date = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.account_name
