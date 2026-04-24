@@ -30,5 +30,6 @@ class MovementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movement
         fields = '__all__'
+    
 
         
