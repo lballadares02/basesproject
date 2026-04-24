@@ -28,27 +28,32 @@ from django.db import transaction  #para asegurar consistencia en BD
 
 class MovementViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para manejar movimientos financieros.
+    ViewSet encargado de manejar los movimientos financieros.
 
     Incluye:
-    - Creación de ingresos/gastos normales
-    - Manejo de transferencias (crea 2 movimientos automáticamente)
+    - CRUD básico (heredado de ModelViewSet)
+    - Lógica personalizada para transferencias
     """
 
+    # Optimización: evita consultas extra al traer relaciones
     queryset = Movement.objects.select_related(
-        "account",
-        "destination_account",
-        "category"
-    )  #Optimiza consultas JOIN
+        "account",                # JOIN con Account
+        "destination_account",   # JOIN con Account destino
+        "category"               # JOIN con Category
+    )
+
     serializer_class = MovementSerializer
 
     def create(self, request, *args, **kwargs):
         """
-        Sobrescribimos create para manejar lógica de negocio:
-        - Si hay destination_account → es transferencia
-        - Si no → es movimiento normal
+        Método sobrescrito para controlar la creación de movimientos.
+
+        Lógica:
+        - Si hay destination_account → transferencia
+        - Si no → movimiento normal
         """
 
+        # Obtener datos del request
         data = request.data
 
         account_id = data.get("account")
@@ -58,16 +63,17 @@ class MovementViewSet(viewsets.ModelViewSet):
         movement_date = data.get("movement_date")
         description = data.get("description", "")
 
-        # VALIDACIONES BÁSICAS
+        # VALIDACIÓN: campos obligatorios
         if not account_id or not amount or not movement_date:
             return Response(
                 {"error": "Faltan campos obligatorios"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # VALIDACIÓN: monto numérico
         try:
             amount = float(amount)
-        except ValueError:
+        except (ValueError, TypeError):
             return Response(
                 {"error": "Monto inválido"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -76,37 +82,38 @@ class MovementViewSet(viewsets.ModelViewSet):
         # CASO 1: TRANSFERENCIA
         if destination_id:
 
-            # Usamos transacción para evitar inconsistencias
+            # Transacción: asegura que ambos movimientos se guarden o ninguno
             with transaction.atomic():
 
-                # Movimiento de salida (negativo)
+                # Movimiento de salida (siempre negativo)
                 out_movement = Movement.objects.create(
                     account_id=account_id,
                     destination_account_id=destination_id,
                     category_id=category_id,
-                    amount=-abs(amount),  # siempre negativo
+                    amount=-abs(amount),  # fuerza valor negativo
                     description=description or "Transferencia enviada",
                     movement_date=movement_date,
                 )
 
-                # Movimiento de entrada (positivo)
+                # Movimiento de entrada (siempre positivo)
                 in_movement = Movement.objects.create(
                     account_id=destination_id,
                     destination_account_id=account_id,
                     category_id=category_id,
-                    amount=abs(amount),  # siempre positivo
+                    amount=abs(amount),  # fuerza valor positivo
                     description="Transferencia recibida",
                     movement_date=movement_date,
                 )
 
+            # Respuesta clara para frontend
             return Response(
                 {
-                    "message": "Transferencia creada correctamente",
-                    "out_movement": MovementSerializer(out_movement).data,
-                    "in_movement": MovementSerializer(in_movement).data,
+                    "message": "Transferencia realizada correctamente",
+                    "salida": MovementSerializer(out_movement).data,
+                    "entrada": MovementSerializer(in_movement).data,
                 },
                 status=status.HTTP_201_CREATED
             )
 
-        # CASO 2: MOVIMIENTO NORMAL (ingreso o gasto)
+        # CASO 2: MOVIMIENTO NORMAL
         return super().create(request, *args, **kwargs)

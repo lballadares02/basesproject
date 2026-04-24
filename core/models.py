@@ -68,6 +68,7 @@ class Service(models.Model):
 
 class Movement(models.Model):
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    
     destination_account = models.ForeignKey(
         Account,
         on_delete=models.SET_NULL,
@@ -92,5 +93,11 @@ class Movement(models.Model):
 
     def __str__(self):
         return f"{self.amount} - {self.account}"
+    
+    class Meta:
+        indexes = [
+        models.Index(fields=['account']),
+        models.Index(fields=['movement_date']),
+        ]
 
 
