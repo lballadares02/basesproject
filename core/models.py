@@ -31,3 +31,20 @@ class Account(models.Model):
 
     def __str__(self):
         return self.account_name
+    
+
+class Category(models.Model):
+    CATEGORY_TYPES = [
+        ('INCOME', 'Income'),
+        ('EXPENSE', 'Expense'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)
+    type = models.CharField(max_length=10, choices=CATEGORY_TYPES)
+    description = models.TextField(blank=True, null=True)
+    color = models.CharField(max_length=7, blank=True, null=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
